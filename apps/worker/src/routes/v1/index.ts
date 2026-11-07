@@ -5,6 +5,7 @@ import { apiKeyAuth, requireScope } from '../../middleware/api-key-auth.js';
 import { getVisibleDomains } from '../../services/domain.js';
 import type { AppContext } from '../../types.js';
 import { createUploadRoutes } from '../uploads.js';
+import v1Admin from './admin.js';
 import v1Mailboxes from './mailboxes.js';
 import v1Messages from './messages.js';
 import { buildOpenApiSpec } from './openapi.js';
@@ -36,6 +37,7 @@ app.get('/domains', apiKeyAuth, async (c) => {
 /** OpenAPI 描述（公开，无需 key） */
 app.get('/openapi.json', (c) => c.json(buildOpenApiSpec(new URL(c.req.url).origin)));
 
+app.route('/admin', v1Admin);
 app.route('/mailboxes', v1Mailboxes);
 app.route('/messages', v1Messages);
 app.route('/uploads', createUploadRoutes(apiKeyAuth, async (c, next) => {

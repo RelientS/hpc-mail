@@ -236,7 +236,7 @@ export function ApiKeysPage() {
         </Table>
       )}
 
-      <CreateApiKeyDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateApiKeyDialog open={createOpen} onOpenChange={setCreateOpen} isAdmin={user.role === 'admin'} />
       <AuditLogDialog apiKey={auditKey} onClose={() => setAuditKey(null)} admin={view === 'all'} />
       <ConfirmDialog
         open={deleting !== null}

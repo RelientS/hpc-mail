@@ -107,7 +107,7 @@ export function buildSessionOpenApiSpec(origin: string) {
     '/api-keys': {
       get: operation('List own API keys without plaintext secrets', array(ref('ApiKeySummary'))),
       post: operation('Create an API key', ref('CreatedApiKey'), { request: 'CreateApiKeyRequest', status: 201,
-        description: 'The full key is returned only once. Scopes limit /v1 operations, never grant administrator/JWT-only permissions, and are additionally bounded by the owner role and mailbox visibility.' }),
+        description: 'The full key is returned only once. Scopes limit /v1 operations and are additionally bounded by the owner role and mailbox visibility. admin.read (administrators only; ordinary users get 403) grants read-only /v1/admin/* views, rechecks the owner role on every call and audits each call; no scope grants administrative writes.' }),
     },
     '/api-keys/{id}': {
       get: operation('Read own API key metadata', ref('ApiKeySummary')),

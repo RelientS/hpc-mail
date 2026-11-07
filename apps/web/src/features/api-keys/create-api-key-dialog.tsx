@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, KeyRound } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import {
+  ADMIN_API_SCOPES,
   API_SCOPES,
   type ApiScope,
   type CreateApiKeyRequest,
@@ -30,6 +31,7 @@ const SCOPE_LABELS: Record<ApiScope, string> = {
   'mail.send': '发送邮件',
   'mailbox.read': '读取邮箱',
   'mailbox.write': '管理邮箱',
+  'admin.read': '管理员只读（审计）',
 };
 
 type ScopePreset = 'read' | 'send' | 'full' | 'custom';
@@ -123,7 +125,12 @@ function CreatedKeyGuide({ created }: { created: CreatedApiKey }) {
   );
 }
 
-export function CreateApiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function CreateApiKeyDialog({ open, onOpenChange, isAdmin = false }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** 管理员额外显示 admin.read；服务端同样拒绝普通用户申请 */
+  isAdmin?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<ApiScope[]>([...DEFAULT_SCOPES]);
@@ -136,6 +143,7 @@ export function CreateApiKeyDialog({ open, onOpenChange }: { open: boolean; onOp
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedApiKey | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
+  const scopeOptions: readonly ApiScope[] = isAdmin ? [...API_SCOPES, ...ADMIN_API_SCOPES] : API_SCOPES;
 
   const create = useMutation({
     mutationFn: (payload: CreateApiKeyRequest) => apiKeyApi.create(payload),
@@ -265,7 +273,7 @@ export function CreateApiKeyDialog({ open, onOpenChange }: { open: boolean; onOp
                       className="w-full [&>button]:flex-1 [&>button]:justify-center [&>button]:px-2"
                     />
                     <div className="grid grid-cols-2 gap-2">
-                      {API_SCOPES.map((scope) => (
+                      {scopeOptions.map((scope) => (
                         <label
                           key={scope}
                           className="flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm text-ink"

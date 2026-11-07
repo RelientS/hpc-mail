@@ -25,6 +25,7 @@ description: 通过 HTTP API 操作 HPC Mail（https://hpc.email）：查收和�
 | 管理自己邮箱的共享名单、搜索共享成员 | `/api/mailboxes/shares…`、`/api/mailboxes/share-users`；用户 JWT | [邮箱、共享与多域名](references/mailboxes-and-domains.md) |
 | 用户专属邮箱权限、强制过户邮箱、全站任意邮箱共享名单、域名增删/公开性/配额/参与随机、每域 Claude 统计、接入检查 | `/api/admin…`；管理员 JWT | [管理员参考](references/administration.md)、[邮箱、共享与多域名](references/mailboxes-and-domains.md) |
 | 用户、邀请码、系统设置、全站 Key 与管理审计、审阅其他用户邮件 | `/api/admin…` 及邮件的管理员 `scope`；管理员 JWT | [管理员功能](references/administration.md) |
+| 只用 Key 只读管理：全站用户、全站邮箱与共享、未认领邮件、只读审阅指定用户、域名统计、管理审计 | `GET /v1/admin/…`：管理员 Key 带 `admin.read`；每次调用写管理审计 | [管理员功能](references/administration.md#api-key-只读管理接口) |
 
 完整机器可读规格：[API Key API](https://hpc.email/v1/openapi.json)、[JWT API](https://hpc.email/api/openapi.json)。两份规格公开可读；业务接口仍逐项鉴权。安装本指南时保留 `references/` 的相对目录；只拿到了本文时，可从 `https://hpc.email/references/<文件名>` 读取对应参考。
 

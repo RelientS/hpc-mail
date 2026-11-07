@@ -85,7 +85,7 @@ pnpm --filter @hpc-mail/worker db:migrate:local  # 应用到本地 D1
 
 ## AI Agent 操作指南 `/skill.md`
 
-`apps/web/public/skill.md` 是一份**给外部 AI Agent 的 API 使用说明书**，随前端构建部署到 https://hpc.email/skill.md（Worker assets 直接返回 raw Markdown）。YAML frontmatter 的 `name` 和 `description` 应准确说明目标系统及触发条件；入口说明认证选择和完整能力地图，详细参数和示例放入其链接的主题参考。API Key 用 `/v1`，JWT 用 `/api`；账户设置及管理员功能只使用 JWT，不扩张邮箱 Key 的权限。**改动了会影响 AI 使用的 API（端点、字段、认证）时，同步更新技能、参考文档和对应 OpenAPI**，保证指引与实现一致。
+`apps/web/public/skill.md` 是一份**给外部 AI Agent 的 API 使用说明书**，随前端构建部署到 https://hpc.email/skill.md（Worker assets 直接返回 raw Markdown）。YAML frontmatter 的 `name` 和 `description` 应准确说明目标系统及触发条件；入口说明认证选择和完整能力地图，详细参数和示例放入其链接的主题参考。API Key 用 `/v1`，JWT 用 `/api`；账户设置及管理员写操作只使用 JWT。唯一例外是 `admin.read`：仅管理员可加到自己的 Key 上，只读 `/v1/admin/*`，每次调用按所属用户当前角色复核并写管理审计 `api_key.admin_read`；不要再给 Key 加管理写权限。**改动了会影响 AI 使用的 API（端点、字段、认证）时，同步更新技能、参考文档和对应 OpenAPI**，保证指引与实现一致。
 
 - `/llms.txt`、首页 HTML 链接和 API 响应 `Link` 头提供文档发现入口；`/api/openapi.json` 与 `/v1/openapi.json` 分别描述会话和 API Key 接口，公开返回原始 OpenAPI JSON（不包 `{data}`）。两份描述均以请求站点 origin 为 server，适用于自部署。
 - 邮件 `scope` 必须显式校验，query/body 同时指定时必须一致；非法值不能静默退回个人邮箱。未知 API 返回统一 JSON 错误信封；缺失 Markdown 文档不能返回 SPA HTML 冒充技能正文。

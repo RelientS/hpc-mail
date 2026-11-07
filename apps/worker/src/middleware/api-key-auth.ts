@@ -2,6 +2,7 @@ import {
   API_KEY_PREFIX,
   MAX_API_GLOBAL_REQUESTS_PER_MINUTE,
   MAX_API_USER_REQUESTS_PER_MINUTE,
+  isAdminApiScope,
   type ApiScope,
   type Role,
   type Settings,
@@ -37,6 +38,7 @@ interface ApiKeyRecord {
   expires_at: number | null;
   user_status: UserStatus | null;
   role: Role | null;
+  username: string | null;
 }
 
 /**
@@ -46,7 +48,7 @@ interface ApiKeyRecord {
 async function loadSettingsAndKey(env: Env, keyHash: string | null): Promise<{ settings: Settings; record: ApiKeyRecord | null }> {
   if (!keyHash) return { settings: await getSettings(env), record: null };
   const keyStatement = env.db.prepare(`SELECT k.id, k.user_id, k.scopes, k.allowed_ips, k.rate_limit, k.status, k.expires_at,
-      u.status AS user_status, u.role
+      u.status AS user_status, u.role, u.username
     FROM api_keys k LEFT JOIN users u ON u.id = k.user_id WHERE k.key_hash = ?`).bind(keyHash);
   const query = settingsQuery(env);
   if ('cached' in query) return { settings: query.cached, record: await keyStatement.first<ApiKeyRecord>() };
@@ -82,6 +84,7 @@ export const apiKeyAuth: MiddlewareHandler<AppContext> = async (c, next) => {
     expiresAt: record.expires_at === null ? null : new Date(Number(record.expires_at)),
     userStatus: record.user_status,
     role: record.role,
+    username: record.username ?? '',
   };
   const db = createDb(c.env);
 
@@ -100,6 +103,7 @@ export const apiKeyAuth: MiddlewareHandler<AppContext> = async (c, next) => {
     c.set('apiKey', {
       id: row.id,
       userId: row.userId,
+      username: row.username,
       role: row.role ?? 'user',
       scopes: row.scopes,
     });
@@ -164,10 +168,16 @@ export const apiKeyAuth: MiddlewareHandler<AppContext> = async (c, next) => {
   }
 };
 
-/** 校验 scope（v1 路由内调用） */
+/**
+ * 校验 scope（v1 路由内调用）。管理员权限（admin.read）除了 Key 上要有，
+ * 还按本次请求时 Key 所属用户的当前角色复核：降级为普通用户或被直接写进库的 scope 都不生效。
+ */
 export function requireScope(c: Context<AppContext>, scope: ApiScope): void {
   const apiKey = c.get('apiKey');
   if (!apiKey || !apiKey.scopes.includes(scope)) {
     throw new AppError('forbidden', `需要 API scope: ${scope}`);
+  }
+  if (isAdminApiScope(scope) && apiKey.role !== 'admin') {
+    throw new AppError('forbidden', `API scope ${scope} 仅限管理员使用`);
   }
 }

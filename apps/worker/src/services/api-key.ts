@@ -1,12 +1,14 @@
 import {
   API_KEY_PREFIX,
   MAX_API_KEYS_PER_USER,
+  isAdminApiScope,
   type ApiKeySummary,
   type ApiRequestLogEntry,
   type ApiScope,
   type CreateApiKeyRequest,
   type CreatedApiKey,
   type Page,
+  type Role,
   type UpdateApiKeyRequest,
 } from '@hpc-mail/shared';
 import { and, desc, eq, lt } from 'drizzle-orm';
@@ -29,6 +31,13 @@ function generateKey(): { key: string; keyPrefix: string; keySuffix: string } {
 
 export function hashApiKey(key: string): Promise<string> {
   return sha256Hex(key);
+}
+
+/** 管理员权限（admin.read）只能由管理员授予自己的 Key；普通用户申请直接拒绝 */
+export function assertGrantableScopes(role: Role, scopes: readonly ApiScope[] | undefined): void {
+  if (role === 'admin' || !scopes) return;
+  const denied = scopes.filter(isAdminApiScope);
+  if (denied.length) throw new AppError('forbidden', `API scope ${denied.join('、')} 仅限管理员申请`);
 }
 
 function serialize(row: ApiKeyRow, ownerUsername?: string): ApiKeySummary {

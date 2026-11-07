@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { ok, parseBody, parseId } from '../lib/http.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
+  assertGrantableScopes,
   createApiKey,
   getApiKey,
   listApiKeyLogs,
@@ -25,6 +26,7 @@ app.get('/', async (c) => {
 app.post('/', async (c) => {
   const user = c.get('user')!;
   const req = await parseBody(c, createApiKeyRequestSchema);
+  assertGrantableScopes(user.role, req.scopes);
   return ok(c, await createApiKey(c.env, user.id, req), 201);
 });
 
@@ -51,6 +53,7 @@ app.put('/:id', async (c) => {
   const user = c.get('user')!;
   const id = parseId(c.req.param('id'));
   const req = await parseBody(c, updateApiKeyRequestSchema);
+  assertGrantableScopes(user.role, req.scopes);
   return ok(c, await updateApiKey(c.env, id, req, user.id));
 });
 

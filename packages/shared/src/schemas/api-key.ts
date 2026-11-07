@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  API_SCOPES,
+  ALL_API_SCOPES,
   DEFAULT_API_RATE_LIMIT,
   MAX_API_RATE_LIMIT,
   type ApiKeyStatus,
@@ -17,7 +17,7 @@ const ipOrCidrSchema = z
 
 export const createApiKeyRequestSchema = z.object({
   name: z.string().trim().min(1).max(64),
-  scopes: z.array(z.enum(API_SCOPES)).min(1),
+  scopes: z.array(z.enum(ALL_API_SCOPES)).min(1),
   rateLimit: z.number().int().min(1).max(MAX_API_RATE_LIMIT).default(DEFAULT_API_RATE_LIMIT),
   allowedIps: z.array(ipOrCidrSchema).max(32).default([]),
   /** ISO 时间；不传则永不过期 */
@@ -28,7 +28,7 @@ export type CreateApiKeyRequest = z.infer<typeof createApiKeyRequestSchema>;
 export const updateApiKeyRequestSchema = z
   .object({
     name: z.string().trim().min(1).max(64).optional(),
-    scopes: z.array(z.enum(API_SCOPES)).min(1).optional(),
+    scopes: z.array(z.enum(ALL_API_SCOPES)).min(1).optional(),
     rateLimit: z.number().int().min(1).max(MAX_API_RATE_LIMIT).optional(),
     allowedIps: z.array(ipOrCidrSchema).max(32).optional(),
     status: z.enum(['active', 'disabled']).optional(),

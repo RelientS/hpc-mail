@@ -1,6 +1,6 @@
 # 管理员功能
 
-所有 `/api/admin/*` 必须有效 **管理员 JWT**，API Key 的五个 scopes 不提供这些权限。调用先 `GET /api/auth/me` 核对当前角色；没有管理员权限时报告限制，不换身份、猜测他人 ID 或通过 `/v1` 规避。shell 示例复用 [入口指南](../skill.md)，设 `API="$BASE/api"`、`AUTH` 为管理员 JWT。
+所有 `/api/admin/*` 必须有效 **管理员 JWT**，API Key 的五个普通 scopes 不提供这些权限；只读查询也可用带 `admin.read` 的管理员 Key 走 `/v1/admin/*`（见下文「API Key 只读管理接口」）。调用先 `GET /api/auth/me` 核对当前角色；没有管理员权限时报告限制，不换身份、猜测他人 ID 或通过 `/v1` 规避。shell 示例复用 [入口指南](../skill.md)，设 `API="$BASE/api"`、`AUTH` 为管理员 JWT。
 
 ## 用户与邮件审阅
 
@@ -119,3 +119,28 @@ AI 模型默认未配置，翻译默认关闭；本站不再使用 Cloudflare Wo
 | `GET /admin/audit-logs?cursor=…&limit=30` | 管理操作审计分页 |
 
 管理员全站 Key 接口没有 PUT；自己 Key 的创建/更新仍用 `/api/api-keys`，不能把 admin metadata 查询当明文找回。审计默认页大小 30、最大 100，倒序读到 nextCursor=null；管理日志含 `id,actorName,action,target,detail,ip,createdAt`；`settings.update` 的 target 只列实际变化的设置键（不含 `expectedDomainsRevision`），detail 为变更摘要，如域名新增/移除、公开性与每人上限变化、`mailbox_policy.perUserLimit: 50→20`；`ai_model.apiKey` 只记「已更新/已清除」，不记录值，Key 日志字段见鉴权参考，保留约 90 天。只根据已看到的审计区间报告结果，不声称此接口是全部应用运行日志或队列监控。生产部署、Cloudflare DNS/Routing、数据库/R2 运维不是这些管理接口提供的能力。
+
+## API Key 只读管理接口
+
+管理员 Key 加上 `admin.read` 后可在 `/v1/admin/*` 只读查询，不用登录 JWT。设 `API="$BASE/v1"`、`AUTH` 为该 Key。每次请求都按 Key 所属用户的当前角色复核，非管理员返回 403；只有 GET，写操作仍走管理员 JWT。每次通过校验的调用（包括业务报错）写一条管理审计：`action=api_key.admin_read`，`target` 为方法加路径，`detail` 为 `key #<id> · <状态码> · <查询串>`。
+
+| 方法与 `/v1` 路径 | 契约 |
+|---|---|
+| `GET /admin/users` | 全部用户数组，同 `GET /api/admin/users` |
+| `GET /admin/users/search?q=…` | 同 `/api/admin/users/search` |
+| `GET /admin/mailboxes` | 全站已认领邮箱，含 ownerUsername（等同 `/v1/mailboxes?all=1`） |
+| `GET /admin/mailboxes/:id` | 任意邮箱，含 messageCount |
+| `GET /admin/mailbox-shares?mailboxId=…` | 全站共享名单 |
+| `GET /admin/messages?scope=unclaimed` | 未认领地址邮件；支持 `/v1/messages` 的筛选与游标 |
+| `GET /admin/messages?scope=user&userId=…` | 只读审阅指定用户认领地址的邮件 |
+| `GET /admin/messages/:id?scope=…&userId=…` | 在同一范围读单封详情，不改已读状态 |
+| `GET /admin/domain-stats` | 每个系统域名的 Claude 账号/封号统计，同 `/api/admin/settings/domain-claude-stats` |
+| `GET /admin/audit-logs?cursor=…&limit=30` | 管理审计分页，含 `api_key.admin_read` 记录 |
+
+`/admin/messages` 必须显式 `scope`，缺省返回 400。没有 `admin.read` 的管理员 Key 保持原行为：`/v1/mailboxes?all=1` 与 `/v1/messages` 的 `scope=unclaimed|user` 仍可用，且不写管理审计。
+
+```bash
+# API="$BASE/v1"，AUTH 为带 admin.read 的管理员 Key
+hpc '/admin/mailboxes' | jq 'length'
+hpc '/admin/messages?scope=unclaimed&limit=20'
+```

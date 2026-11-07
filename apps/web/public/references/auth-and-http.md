@@ -53,7 +53,7 @@ hpc '/auth/me'
 
 ## Key-only 与长期自动化
 
-已有 `hpcm_` Key 可直接访问 `/v1`，无需 bootstrap 登录。Key 的所属用户当前角色、状态、邮箱归属/共享仍决定访问权；scopes 不是管理员权限。系统关闭开放 API、Key 被禁用/吊销/过期、来源 IP 不匹配均会拒绝；Key 不能创建 Key、改密码、配置个人通知或管理用户/域名/共享。
+已有 `hpcm_` Key 可直接访问 `/v1`，无需 bootstrap 登录。Key 的所属用户当前角色、状态、邮箱归属/共享仍决定访问权；除 `admin.read` 外，scopes 不是管理员权限。系统关闭开放 API、Key 被禁用/吊销/过期、来源 IP 不匹配均会拒绝；Key 不能创建 Key、改密码、配置个人通知或管理用户/域名/共享。
 
 | Scope | 能力 |
 |---|---|
@@ -62,6 +62,9 @@ hpc '/auth/me'
 | `mail.send` | 发信及独立附件上传/取消上传 |
 | `mailbox.read` | 自有/共享邮箱列表、地址可用性 |
 | `mailbox.write` | 认领、邮箱显示名、释放及可选清除历史 |
+| `admin.read` | **仅管理员**：只读 `/v1/admin/*`（全站用户、全站邮箱、共享名单、未认领邮件、只读审阅指定用户邮件、域名统计、管理审计），见[管理员参考](administration.md#api-key-只读管理接口) |
+
+`admin.read` 只能由管理员通过 `/api/api-keys` 加到自己的 Key 上，普通用户申请或追加返回 403；每次调用按所属用户**当前**角色复核，降级后立即失效，每次调用都写一条管理审计 `api_key.admin_read`。它不开放任何写操作，也不改变 `/v1/messages`、`/v1/mailboxes` 原有行为。
 
 `GET /v1/status` 返回 `{status:"operational",userId,role,scopes}`；`GET /v1/domains` 返回 `{domains:[...]}`；均只需任一有效 Key，无独立 scope。普通用户看到公开域，管理员看到配置中的全部域；存量旧邮箱域需另从邮箱列表发现。
 

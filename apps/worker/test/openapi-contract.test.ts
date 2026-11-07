@@ -66,11 +66,21 @@ describe('OpenAPI routes and public contracts', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('documents auth boundaries and scopes without granting admin functions to API keys', () => {
+  it('documents auth boundaries and scopes; API keys get only read-only admin views via admin.read', () => {
     expect(specs.api.security).toEqual([{ sessionToken: [] }]);
     expect(specs.api.paths['/auth/login']?.post?.security).toEqual([]);
     expect(specs.api.paths['/admin/settings']?.put?.['x-required-role']).toBe('admin');
     expect(specs.v1.paths).not.toHaveProperty('/admin/settings');
+    // /v1/admin 只读：只有 GET，且全部要求 admin.read + 管理员角色
+    const v1Admin = Object.entries(specs.v1.paths).filter(([path]) => path.startsWith('/admin/'));
+    expect(v1Admin.length).toBeGreaterThan(0);
+    for (const [path, item] of v1Admin) {
+      expect(Object.keys(item).filter(method => methods.has(method)), path).toEqual(['get']);
+      expect(item.get?.['x-required-scopes'], path).toEqual(['admin.read']);
+      expect(item.get?.['x-required-role'], path).toBe('admin');
+    }
+    expect(Object.entries(specs.v1.paths).filter(([path]) => !path.startsWith('/admin/'))
+      .flatMap(([, item]) => Object.values(item)).some(operation => (operation as Record<string, unknown>)['x-required-scopes']?.toString() === 'admin.read')).toBe(false);
     expect(specs.v1.paths['/messages']?.post?.['x-required-scopes']).toEqual(['mail.send']);
     expect(specs.v1.paths['/uploads']?.post?.['x-required-scopes']).toEqual(['mail.send']);
     expect(specs.v1.paths['/mailboxes']?.post?.['x-required-scopes']).toEqual(['mailbox.write']);

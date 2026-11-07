@@ -30,6 +30,8 @@ export interface AuthUser {
 export interface ApiKeyContext {
   id: number;
   userId: number;
+  /** 所属用户名：admin.read 写管理审计时作为 actorName */
+  username: string;
   role: Role;
   scopes: ApiScope[];
 }

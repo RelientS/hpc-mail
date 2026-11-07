@@ -1,14 +1,49 @@
+import { ALL_API_SCOPES } from '@hpc-mail/shared';
 import {
-  array, bool, changed, describePaths, idempotencyHeader, int, listQuery, mutationQuery, object, operation,
-  positiveId, query, ref, scopeQuery, specInfo, specificationOperation, str, uploadPaths, usedSchemas, type Paths,
+  array, bool, changed, describePaths, idempotencyHeader, int, listQuery, mutationQuery, object, operation, page, pageQuery,
+  positiveId, query, ref, scopeQuery, specInfo, specificationOperation, str, uploadPaths, usedSchemas, type Paths, type Schema,
 } from '../openapi-common.js';
+
+/** /v1/admin 只读接口：Key 需 admin.read，且所属用户当前为管理员；每次调用写管理审计 api_key.admin_read。 */
+const adminRead = { role: 'admin' as const, scope: 'admin.read' };
+const adminScopeQuery: Schema[] = [
+  query('scope', { type: 'string', enum: ['unclaimed', 'user'] }, 'Required. unclaimed = mail at unclaimed addresses; user = read-only review of the user given by userId.', true),
+  query('userId', positiveId, 'Required when scope=user.'),
+];
+const adminListQuery: Schema[] = [...listQuery.filter(param => param.name !== 'scope' && param.name !== 'userId'), ...adminScopeQuery];
+const adminNote = 'Read-only. Requires an API key with admin.read whose owner is currently an administrator (checked on every request). Every call that passes this check is written to the administrator audit log as api_key.admin_read.';
+
+function adminPaths(): Paths {
+  return {
+    '/admin/users': { get: operation('List all users (read-only)', array(ref('AdminUser')), { ...adminRead,
+      description: `Same data as JWT GET /api/admin/users. ${adminNote}` }) },
+    '/admin/users/search': { get: operation('Search active users (read-only)', ref('UserSearchResults'), { ...adminRead,
+      parameters: [query('q', { type: 'string', minLength: 1, maxLength: 32 }, 'Required username substring, trimmed and case-insensitive.', true),
+        query('excludeUserId', { type: 'integer', minimum: 1 }), query('limit', { type: 'integer', minimum: 1, maximum: 20, default: 20 })],
+      description: `Same as JWT GET /api/admin/users/search. ${adminNote}` }) },
+    '/admin/mailboxes': { get: operation('List every claimed mailbox (read-only)', array(ref('Mailbox')), { ...adminRead,
+      description: `All owners, with ownerUsername. Equivalent to GET /mailboxes?all=1. ${adminNote}` }) },
+    '/admin/mailboxes/{id}': { get: operation('Read any claimed mailbox (read-only)', ref('Mailbox'), { ...adminRead,
+      description: `Includes ownerUsername and messageCount; 404 when missing. ${adminNote}` }) },
+    '/admin/mailbox-shares': { get: operation('List share grants on all claimed mailboxes (read-only)', array(ref('MailboxShareGrant')), { ...adminRead,
+      parameters: [query('mailboxId', { type: 'integer', minimum: 1 }, 'Only this mailbox (at most one item).')], description: adminNote }) },
+    '/admin/messages': { get: operation('List unclaimed mail or review one user’s mail (read-only)', ref('MessagePage'), { ...adminRead, parameters: adminListQuery,
+      description: `scope is required: unclaimed lists mail at unclaimed addresses; user lists mail at addresses claimed by userId. Cursor pagination as GET /messages. Never changes read state. ${adminNote}` }) },
+    '/admin/messages/{id}': { get: operation('Read one message in the selected administrator scope (read-only)', ref('MessageDetail'), { ...adminRead, parameters: adminScopeQuery,
+      description: `Pass the same scope/userId used for the list; 404 when the message is not visible in that scope. Does not mark the message read. ${adminNote}` }) },
+    '/admin/domain-stats': { get: operation('Per-domain Claude account statistics (read-only)', array(ref('DomainClaudeStats')), { ...adminRead,
+      description: `Same as JWT GET /api/admin/settings/domain-claude-stats: one item per configured domain, in list order. ${adminNote}` }) },
+    '/admin/audit-logs': { get: operation('Read administrator audit logs (read-only)', page(ref('AdminAuditLog')), { ...adminRead, parameters: pageQuery,
+      description: `Includes api_key.admin_read entries written by this API. ${adminNote}` }) },
+  };
+}
 
 /** Public API-key contract. Session/admin operations are described separately. */
 export function buildOpenApiSpec(origin: string) {
   const paths: Paths = {
     '/openapi.json': { get: specificationOperation() },
     '/status': { get: operation('Check API key access', object({ status: { type: 'string', const: 'operational' }, userId: positiveId,
-      role: { type: 'string', enum: ['admin', 'user'] }, scopes: array({ type: 'string', enum: ['mail.read', 'mail.write', 'mail.send', 'mailbox.read', 'mailbox.write'] }) }),
+      role: { type: 'string', enum: ['admin', 'user'] }, scopes: array({ type: 'string', enum: ALL_API_SCOPES }) }),
       { description: 'Requires an active API key and enabled API. No additional scope. This confirms access, not end-to-end mail delivery.' }) },
     '/domains': { get: operation('List configured domains available to this user', object({ domains: array(str) }),
       { description: 'No additional scope. Ordinary users see public domains or their dedicated mailboxPolicy domains, including explicitly granted private domains; administrators see all configured domains. Claim only a returned domain. Removed domains remain usable for existing owned mailbox identities but are absent from this new-claim list.' }) },
@@ -64,13 +99,15 @@ export function buildOpenApiSpec(origin: string) {
     '/messages/{id}/attachments/{attId}': { get: operation('Download a visible message attachment', str, { scope: 'mail.read', parameters: scopeQuery, binary: 'application/octet-stream',
       description: 'Binary bytes with a safe Content-Type/Content-Disposition, without a data envelope. Attachment must belong to message id and the message must be visible.' }) },
     ...uploadPaths('mail.send'),
+    ...adminPaths(),
   };
   return {
-    openapi: '3.1.0', info: specInfo('HPC Mail Open API', 'API-key mail/mailbox automation. Bearer hpcm_ keys are distinct from JWT sessions. Keys are limited by owner, scope, expiry, IP allowlist and per-key/user/instance rates; users cannot create arbitrary domains. Management, notification preferences, sessions and 2FA use the related JWT API.'),
+    openapi: '3.1.0', info: specInfo('HPC Mail Open API', 'API-key mail/mailbox automation. Bearer hpcm_ keys are distinct from JWT sessions. Keys are limited by owner, scope, expiry, IP allowlist and per-key/user/instance rates; users cannot create arbitrary domains. Administrators may add the admin.read scope for read-only /admin/* views (users, all mailboxes, shares, unclaimed mail, per-user mail review, domain statistics, audit logs); every such call is audited. All administrative writes, notification preferences, sessions and 2FA use the related JWT API.'),
     servers: [{ url: `${origin}/v1` }], security: [{ apiKey: [] }],
     externalDocs: { description: 'Agent usage guide and authentication workflows', url: `${origin}/skill.md` },
     'x-relatedApis': [{ url: `${origin}/api/openapi.json`, description: 'JWT session and administration API' }],
-    tags: [{ name: 'Mail', description: 'Mail and mailbox operations. Required scopes are listed in x-required-scopes.' }],
+    tags: [{ name: 'Mail', description: 'Mail and mailbox operations. Required scopes are listed in x-required-scopes.' },
+      { name: 'Administration', description: 'Read-only administrator views. Require scope admin.read and an administrator key owner (x-required-role).' }],
     components: { securitySchemes: { apiKey: { type: 'http', scheme: 'bearer', bearerFormat: 'hpcm_ followed by 64 hexadecimal characters' } }, schemas: usedSchemas(paths) },
     paths: describePaths(paths),
   };

@@ -7,6 +7,7 @@ export type Role = (typeof ROLES)[number];
 export const USER_STATUSES = ['active', 'disabled'] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
 
+/** 普通用户可申请的 API Key 权限（「完全访问」预设即这一组） */
 export const API_SCOPES = [
   'mail.read',
   'mail.write',
@@ -14,7 +15,15 @@ export const API_SCOPES = [
   'mailbox.read',
   'mailbox.write',
 ] as const;
-export type ApiScope = (typeof API_SCOPES)[number];
+/** 仅管理员可申请与使用的 API Key 权限：admin.read = 只读 /v1/admin/*，每次调用写管理审计 */
+export const ADMIN_API_SCOPES = ['admin.read'] as const;
+/** Key 上可出现的全部权限（请求校验用） */
+export const ALL_API_SCOPES = [...API_SCOPES, ...ADMIN_API_SCOPES] as const;
+export type ApiScope = (typeof ALL_API_SCOPES)[number];
+export type AdminApiScope = (typeof ADMIN_API_SCOPES)[number];
+export function isAdminApiScope(scope: string): scope is AdminApiScope {
+  return (ADMIN_API_SCOPES as readonly string[]).includes(scope);
+}
 
 export const MESSAGE_DIRECTIONS = ['inbound', 'outbound'] as const;
 export type MessageDirection = (typeof MESSAGE_DIRECTIONS)[number];

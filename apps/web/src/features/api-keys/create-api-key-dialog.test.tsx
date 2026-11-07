@@ -30,11 +30,11 @@ import {
 
 const DAY = 24 * 60 * 60 * 1000;
 
-function renderDialog() {
+function renderDialog(role?: 'admin' | 'user') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <CreateApiKeyDialog open onOpenChange={vi.fn()} />
+      <CreateApiKeyDialog open onOpenChange={vi.fn()} isAdmin={role === 'admin'} />
     </QueryClientProvider>,
   );
 }
@@ -104,6 +104,25 @@ describe('CreateApiKeyDialog', () => {
     const body = mocks.create.mock.calls[0]![0];
     expect([...body.scopes].sort()).toEqual(['mail.read', 'mailbox.read']);
     expect(body.expiresAt).toBeUndefined();
+  });
+
+  it('admin.read 只对管理员显示，且「完全访问」不含它', async () => {
+    renderDialog('user');
+    expect(screen.queryByRole('checkbox', { name: '管理员只读（审计）' })).toBeNull();
+  });
+
+  it('管理员可勾选 admin.read 并提交', async () => {
+    mocks.create.mockResolvedValue(createdKey());
+    const user = userEvent.setup();
+    renderDialog('admin');
+    await user.click(screen.getByRole('radio', { name: '完全访问' }));
+    expect(screen.getByRole('checkbox', { name: '管理员只读（审计）' })).not.toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: '管理员只读（审计）' }));
+    expect(screen.getByRole('radio', { name: '完全访问' })).toHaveAttribute('aria-checked', 'false');
+    await user.type(screen.getByLabelText(/名称/), '审计脚本');
+    await user.click(screen.getByRole('button', { name: '创建' }));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
+    expect(mocks.create.mock.calls[0]![0].scopes).toContain('admin.read');
   });
 
   it('切换预设会改勾选，手动勾选后按结果高亮预设或自定义', async () => {
