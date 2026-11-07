@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import type { LoginResponse } from '@hpc-mail/shared';
 import { ApiError } from '@/api/errors';
 import { queryKeys } from '@/api/query-keys';
@@ -295,6 +295,7 @@ export function LoginPage() {
               {mode === 'login' ? '登录' : '注册并登录'}
             </Button>
           </form>
+          <Link to="/mailbox-login" className="mt-5 block text-center text-sm text-accent underline-offset-4 hover:underline">使用邮箱和临时密码登录</Link>
         </div>
 
         <a

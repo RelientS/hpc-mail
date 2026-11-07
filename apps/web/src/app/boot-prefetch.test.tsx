@@ -58,6 +58,15 @@ beforeEach(() => {
 afterEach(() => queryClient.clear());
 
 describe('bootPrefetch', () => {
+  it('邮箱临时页面不加载主账号会话、邮箱或持久缓存', () => {
+    localStorage.setItem('token', 'owner-token');
+    for (const pathname of ['/mailbox-login', '/mailbox-inbox']) bootPrefetch(queryClient, { pathname, search: '' });
+    expect(api.me).not.toHaveBeenCalled();
+    expect(api.list).not.toHaveBeenCalled();
+    expect(api.mailboxes).not.toHaveBeenCalled();
+    expect(loaders.shell).not.toHaveBeenCalled();
+    expect(cachedHashes()).toEqual([]);
+  });
   it('未登录只预取公开配置', () => {
     bootPrefetch(queryClient, { pathname: '/login', search: '' });
     expect(api.config).toHaveBeenCalledTimes(1);

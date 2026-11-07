@@ -1,6 +1,7 @@
 import {
   batchMailboxRequestSchema, claimMailboxRequestSchema, claimPlanQuerySchema, replaceMailboxSharesRequestSchema, searchUsersQuerySchema,
   updateMailboxRequestSchema,
+  createMailboxAccessSchema,
 } from '@hpc-mail/shared';
 import { Hono } from 'hono';
 import { execCtx, ok, parseBody, parseBooleanFlag, parseId, parseQuery } from '../lib/http.js';
@@ -18,6 +19,7 @@ import {
 import { planRandomDomains } from '../services/claim-plan.js';
 import { listMailboxShares, listSharedMailboxes, replaceMailboxShares, revokeMailboxShare } from '../services/mailbox-share.js';
 import { searchUsers } from '../services/user.js';
+import { createMailboxAccess, mailboxAccessStatus, revokeMailboxAccess } from '../services/mailbox-access.js';
 import type { AppContext } from '../types.js';
 
 const app = new Hono<AppContext>();
@@ -94,6 +96,17 @@ app.put('/:id', async (c) => {
   const id = parseId(c.req.param('id'));
   const req = await parseBody(c, updateMailboxRequestSchema);
   return ok(c, await updateMailbox(c.env, user.id, id, req.displayName, user.role === 'admin'));
+});
+
+app.get('/:id/temp-access', async (c) => ok(c, await mailboxAccessStatus(c.env, c.get('user')!, parseId(c.req.param('id')))));
+app.put('/:id/temp-access', async (c) => {
+  const req = await parseBody(c, createMailboxAccessSchema);
+  c.header('Cache-Control', 'private, no-store');
+  return ok(c, await createMailboxAccess(c.env, c.get('user')!, parseId(c.req.param('id')), req.maxLogins));
+});
+app.delete('/:id/temp-access', async (c) => {
+  await revokeMailboxAccess(c.env, c.get('user')!, parseId(c.req.param('id')));
+  return ok(c, { success: true });
 });
 
 app.delete('/:id', async (c) => {

@@ -145,6 +145,8 @@ export async function forwardReceivedMail(
   const ownersByTarget = new Map<string, number[]>();
   prefs.forEach((pref, index) => {
     if (!pref.forward.enabled) return;
+    const sources = pref.forward.sourceAddresses;
+    if (sources?.length && !sources.some((address) => normalizeEmail(address) === normalizeEmail(mail.toAddress))) return;
     for (const rawTarget of pref.forward.addresses) {
       const target = normalizeEmail(rawTarget);
       if (!target || target === mail.toAddress) continue;

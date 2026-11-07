@@ -190,6 +190,14 @@ export function ForwardingSection({ id }: { id?: string }) {
           onChange={(addresses) => patch((d) => void (d.forward.addresses = addresses))}
           placeholder="输入目标邮箱地址后回车"
         />
+        <p className="text-sm text-ink-secondary">仅转发指定收件地址</p>
+        <RecipientInput
+          aria-label="仅转发指定收件地址"
+          value={draft.forward.sourceAddresses ?? []}
+          onChange={(sourceAddresses) => patch((d) => void (d.forward.sourceAddresses = sourceAddresses))}
+          placeholder="填写要转发的本站邮箱，留空则转发全部"
+        />
+        <p className="text-xs text-ink-tertiary">填写后只转发这些地址的新来信，邮箱内仍保留副本；留空则转发你所有归属地址的来信。</p>
         <p className="text-xs text-ink-tertiary">
           任意邮箱均可转发。已在 Cloudflare Email Routing 验证过的地址走原生转发（原样保留邮件）；
           未验证的地址由系统以 no-reply@收件域名 中转重发（标注原始发件人，直接回复即回给对方）。

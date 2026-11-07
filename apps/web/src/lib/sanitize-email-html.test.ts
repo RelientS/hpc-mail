@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { sanitizeEmailHtml } from './sanitize-email-html'
 
+it('临时邮箱只允许本机附件图片路径，保持阻止远程跟踪图和任意接口', () => {
+  const html = sanitizeEmailHtml('<img src="/api/mailbox-access/attachments/12"><img src="https://track.example/a.png"><img src="/api/auth/me">', {
+    allowRemoteImages: false,
+    baseOrigin: 'https://mail.test',
+  });
+  expect(html).toContain('/api/mailbox-access/attachments/12');
+  expect(html).not.toContain('https://track.example/a.png');
+  expect(html).not.toContain('/api/auth/me');
+});
+
 /** 复刻 email-html.tsx 的用法：消毒结果被 innerHTML 二次解析 */
 function reparse(html: string): HTMLDivElement {
   const host = document.createElement('div')

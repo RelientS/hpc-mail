@@ -141,6 +141,13 @@
       "when": 1792169522494,
       "tag": "0019_claude_address_facts",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1793353009921,
+      "tag": "0020_mailbox_temporary_access",
+      "breakpoints": true
     }
   ]
 }

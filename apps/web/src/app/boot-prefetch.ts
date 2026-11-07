@@ -44,6 +44,7 @@ export function bootPrefetch(
   client: QueryClient = defaultClient,
   location: Pick<Location, 'pathname' | 'search'> = globalThis.location,
 ): void {
+  if (['/mailbox-login', '/mailbox-inbox'].includes(normalizePathname(location.pathname))) return;
   restoreQueryCache(client);
   void client.prefetchQuery(publicConfigQueryOptions());
   if (!getAuthToken()) return;

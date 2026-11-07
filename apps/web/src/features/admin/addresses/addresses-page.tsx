@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { measureElement as measureSize, useWindowVirtualizer } from '@tanstack/react-virtual';
-import { ArrowRightLeft, AtSign, Mail, MoreHorizontal, Search, Share2, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, AtSign, KeyRound, Mail, MoreHorizontal, Search, Share2, Trash2 } from 'lucide-react';
+import { TemporaryAccessDialog } from '@/features/mailboxes/temporary-access-dialog';
 import {
   memo,
   type RefObject,
@@ -114,6 +115,7 @@ function AddressLink({ mailbox }: { mailbox: Mailbox }) {
 }
 
 interface RowActions {
+  onTemporaryAccess: (mailbox: Mailbox) => void;
   onTransfer: (mailbox: Mailbox) => void;
   onShare: (mailbox: Mailbox) => void;
   onRelease: (mailbox: Mailbox) => void;
@@ -210,6 +212,9 @@ const AddressTableRow = memo(function AddressTableRow({ mailbox, index, measureE
             }}
           >
             <Share2 className="size-4" aria-hidden="true" />
+          </IconButton>
+          <IconButton size="sm" aria-label={`临时登录 ${mailbox.address}`} title="临时登录" onClick={() => actions.onTemporaryAccess(mailbox)}>
+            <KeyRound className="size-4" />
           </IconButton>
           <IconButton size="sm" aria-label="强制释放" onClick={() => actions.onRelease(mailbox)}>
             <Trash2 className="size-4 text-critical" />
@@ -320,6 +325,9 @@ const AddressCard = memo(function AddressCard({
               <Trash2 className="size-4" />
               强制释放
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => actions.onTemporaryAccess(mailbox)}>
+              <KeyRound className="size-4 text-ink-tertiary" />临时登录
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       }
@@ -362,6 +370,7 @@ export function AddressesPage() {
   const [releasing, setReleasing] = useState<Mailbox | null>(null);
   const [transferring, setTransferring] = useState<Mailbox | null>(null);
   const [sharing, setSharing] = useState<Mailbox | null>(null);
+  const [temporaryAccess, setTemporaryAccess] = useState<Mailbox | null>(null);
   const shareTrigger = useRef<HTMLButtonElement | null>(null);
 
   const closeSharing = useCallback(() => {
@@ -371,7 +380,7 @@ export function AddressesPage() {
 
   // 引用保持稳定：输入搜索词、打开弹窗时列表与各行不必重渲染
   const actions = useMemo<RowActions>(
-    () => ({ onTransfer: setTransferring, onShare: setSharing, onRelease: setReleasing, shareTrigger }),
+    () => ({ onTransfer: setTransferring, onShare: setSharing, onRelease: setReleasing, onTemporaryAccess: setTemporaryAccess, shareTrigger }),
     [],
   );
 
@@ -411,6 +420,7 @@ export function AddressesPage() {
       <ForceReleaseDialog mailbox={releasing} onClose={() => setReleasing(null)} />
       <TransferMailboxDialog mailbox={transferring} onClose={() => setTransferring(null)} />
       {sharing && <AddressShareDialog key={sharing.id} mailbox={sharing} onClose={closeSharing} />}
+      {temporaryAccess && <TemporaryAccessDialog key={temporaryAccess.id} mailbox={temporaryAccess} onClose={() => setTemporaryAccess(null)} />}
     </div>
   );
 }

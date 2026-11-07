@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AtSign, Inbox, MoreHorizontal, Pencil, Plus, Share2, Trash2 } from 'lucide-react';
+import { AtSign, Inbox, KeyRound, MoreHorizontal, Pencil, Plus, Share2, Trash2 } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Mailbox } from '@hpc-mail/shared';
@@ -31,6 +31,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { ClaimDialog } from './claim-dialog';
 import { useMailboxesQuery, useSharedMailboxesQuery } from './use-mailboxes';
 import { OwnMailboxShareDialog } from './mailbox-share-dialog';
+import { TemporaryAccessDialog } from './temporary-access-dialog';
 
 function EditMailboxDialog({ mailbox, onClose }: { mailbox: Mailbox | null; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -187,11 +188,13 @@ function MailboxCards({
   onEdit,
   onRelease,
   onShare,
+  onTemporaryAccess,
 }: {
   items: Mailbox[];
   onEdit: (mailbox: Mailbox) => void;
   onRelease: (mailbox: Mailbox) => void;
   onShare: (mailbox: Mailbox) => void;
+  onTemporaryAccess: (mailbox: Mailbox) => void;
 }) {
   const navigate = useNavigate();
   return (
@@ -223,6 +226,9 @@ function MailboxCards({
                   <Share2 className="size-4 text-ink-tertiary" />
                   共享邮箱
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onTemporaryAccess(mailbox)}>
+                  <KeyRound className="size-4 text-ink-tertiary" />临时登录
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onEdit(mailbox)}>
                   <Pencil className="size-4 text-ink-tertiary" />
                   编辑备注
@@ -253,6 +259,7 @@ export function MailboxesPage() {
   const [releasing, setReleasing] = useState<Mailbox | null>(null);
   const [editing, setEditing] = useState<Mailbox | null>(null);
   const [sharing, setSharing] = useState<Mailbox | null>(null);
+  const [temporaryAccess, setTemporaryAccess] = useState<Mailbox | null>(null);
 
   const invalidateMailboxes = () =>
     invalidateMailboxOwnership(queryClient);
@@ -302,7 +309,7 @@ export function MailboxesPage() {
           className="rounded-lg border border-line bg-surface"
         />
       ) : isMobile ? (
-        <MailboxCards items={items} onEdit={setEditing} onRelease={setReleasing} onShare={setSharing} />
+        <MailboxCards items={items} onEdit={setEditing} onRelease={setReleasing} onShare={setSharing} onTemporaryAccess={setTemporaryAccess} />
       ) : (
         <Table>
           <TableHeader>
@@ -325,6 +332,9 @@ export function MailboxesPage() {
                 <TableCell className="text-ink-tertiary">{formatDateTime(mailbox.createdAt)}</TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    <IconButton size="sm" aria-label={`临时登录 ${mailbox.address}`} onClick={() => setTemporaryAccess(mailbox)}>
+                      <KeyRound className="size-4" />
+                    </IconButton>
                     <IconButton size="sm" aria-label={`共享 ${mailbox.address}`} onClick={() => setSharing(mailbox)}>
                       <Share2 className="size-4" />
                     </IconButton>
@@ -361,6 +371,7 @@ export function MailboxesPage() {
       <ClaimDialog open={claimOpen} onOpenChange={setClaimOpen} domains={visibleDomains ?? []} />
       <EditMailboxDialog mailbox={editing} onClose={() => setEditing(null)} />
       {sharing && <OwnMailboxShareDialog key={sharing.id} mailbox={sharing} onClose={() => setSharing(null)} />}
+      {temporaryAccess && <TemporaryAccessDialog key={temporaryAccess.id} mailbox={temporaryAccess} onClose={() => setTemporaryAccess(null)} />}
       <ReleaseDialog
         mailbox={releasing}
         onClose={() => setReleasing(null)}

@@ -60,6 +60,21 @@ afterEach(() => {
 });
 
 describe('转发与通知', () => {
+  it('editing another setting retains a restricted forwarding source', async () => {
+    const existing = prefs();
+    existing.forward = { enabled: true, addresses: ['target@example.net'], sourceAddresses: ['only@example.com'] };
+    mocks.get.mockResolvedValue(existing);
+    mocks.update.mockImplementation(async (body: UserNotifyPrefs) => body);
+    const { client } = renderSection();
+    const url = await screen.findByPlaceholderText(/open\.feishu\.cn/);
+    expect(screen.getByLabelText('仅转发指定收件地址')).toBeInTheDocument();
+    fireEvent.change(url, { target: { value: 'https://open.feishu.cn/open-apis/bot/v2/hook/changed' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存并发送测试卡片' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalled());
+    expect(mocks.update.mock.calls[0]![0].forward.sourceAddresses).toEqual(['only@example.com']);
+    client.clear();
+  });
+
   it('通道开关打开才展开配置项', async () => {
     mocks.get.mockResolvedValue(prefs());
     const { client } = renderSection();

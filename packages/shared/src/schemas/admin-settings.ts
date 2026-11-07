@@ -12,6 +12,8 @@ export const gmailForwardSettingSchema = z.object({
   enabled: z.boolean(),
   /** 转发目标邮箱；已验证 destination 走原生 forward，其余走 no-reply 中转 */
   addresses: z.array(emailAddressSchema).max(5),
+  /** 非空时只转发这些收件地址；不填或空数组表示所有归属地址。 */
+  sourceAddresses: z.array(emailAddressSchema).max(100).optional(),
 });
 
 export const feishuSettingSchema = z.object({

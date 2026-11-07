@@ -96,3 +96,9 @@ jq --arg domain "$HPC_NEW_DOMAIN" '
 - 配置为空且无存量邮箱时没有可用发件/认领域；需管理员先完成实际域名接入。不应承诺外部投递由“保存域名”即可成功。
 
 接入检查 `GET /api/admin/settings/domain-status?domain=…` 返回 `domain,inList,mxReady,spfReady,mxRecords,resolved`。`resolved:false` 是查询失败，不是证明没接入；MX 指向 `*.mx.cloudflare.net`、SPF 包含 `_spf.mx.cloudflare.net` 只验证 DNS，不能证明 catch-all 指向本 Worker、外发授权或真实投递成功。完整接入需用户授权范围内的 DNS/Cloudflare 配置与真实收发验证，这些操作并非本邮箱管理 API 的能力。
+
+## 临时密码与登录次数
+
+邮箱所有者或管理员可调用 `GET /api/mailboxes/:id/temp-access` 查看 `{enabled,maxLogins,usedLogins,remainingLogins}`；`PUT` 同一路径提交 `{maxLogins:1}`（整数1～100）生成随机密码，响应额外包含只返回一次的 `password`。再次 PUT 替换旧密码并撤销全部旧临时会话。`DELETE` 撤销临时访问。仅有共享权限的成员不能生成密码，API Key 不支持此管理操作。
+
+网页入口在“我的邮箱”和“全站地址”的钥匙按钮。生成后可复制登录地址、邮箱和临时密码。临时收件箱只显示当前地址来信，细节见[临时鉴权](auth-and-http.md#单邮箱临时登录)。

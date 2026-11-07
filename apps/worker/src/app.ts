@@ -16,6 +16,7 @@ import avatar from './routes/avatar.js';
 import config from './routes/config.js';
 import domains from './routes/domains.js';
 import mailboxes from './routes/mailboxes.js';
+import mailboxAccess from './routes/mailbox-access.js';
 import messages from './routes/messages.js';
 import notifyPrefs from './routes/notify-prefs.js';
 import v1 from './routes/v1/index.js';
@@ -40,6 +41,7 @@ export function createApp() {
   api.route('/config', config);
   api.route('/domains', domains);
   api.route('/mailboxes', mailboxes);
+  api.route('/mailbox-access', mailboxAccess);
   api.route('/messages', messages);
   api.route('/me/notify-prefs', notifyPrefs);
   api.route('/attachments', attachments);

@@ -232,6 +232,7 @@ function isSafeImage(
     if (parsed.protocol !== 'https:') return false
     if (allowRemoteImages) return true
     if (parsed.origin === baseOrigin) return parsed.pathname.startsWith('/api/attachments/')
+      || /^\/api\/mailbox-access\/attachments\/\d+$/.test(parsed.pathname)
     return trustedOrigins.has(parsed.origin)
   } catch {
     return false

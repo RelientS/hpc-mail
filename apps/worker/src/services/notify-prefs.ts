@@ -22,7 +22,8 @@ function clone(prefs: UserNotifyPrefs): UserNotifyPrefs {
   return {
     feishu: { ...prefs.feishu },
     webhook: { ...prefs.webhook },
-    forward: { ...prefs.forward, addresses: [...prefs.forward.addresses] },
+    forward: { ...prefs.forward, addresses: [...prefs.forward.addresses],
+      ...(prefs.forward.sourceAddresses ? { sourceAddresses: [...prefs.forward.sourceAddresses] } : {}) },
     pushdeer: { ...prefs.pushdeer },
   };
 }
@@ -191,7 +192,13 @@ export async function updateUserNotifyPrefs(
       secret: patch.webhook.secret === SECRET_MASK ? current.webhook.secret : patch.webhook.secret,
     };
   }
-  if (patch.forward) next.forward = { ...patch.forward, addresses: [...patch.forward.addresses] };
+  if (patch.forward) {
+    // An older client omitting the filter must not silently broaden forwarding.
+    // Send an explicit [] to return to forwarding every owned address.
+    const sources = patch.forward.sourceAddresses ?? current.forward.sourceAddresses;
+    next.forward = { ...patch.forward, addresses: [...patch.forward.addresses],
+      ...(sources ? { sourceAddresses: [...sources] } : {}) };
+  }
   if (patch.pushdeer) {
     next.pushdeer = {
       ...patch.pushdeer,

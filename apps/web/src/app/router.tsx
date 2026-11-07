@@ -12,6 +12,8 @@ import {
   loadComposePage,
   loadInboxPage,
   loadMailboxesPage,
+  loadMailboxLoginPage,
+  loadMailboxInboxPage,
   loadMessagePage,
   loadProfilePage,
   loadSentPage,
@@ -37,6 +39,8 @@ const SentPage = page(loadSentPage, (m) => m.SentPage);
 const StarredPage = page(loadStarredPage, (m) => m.StarredPage);
 const TrashPage = page(loadTrashPage, (m) => m.TrashPage);
 const MailboxesPage = page(loadMailboxesPage, (m) => m.MailboxesPage);
+const MailboxLoginPage = page(loadMailboxLoginPage, (m) => m.MailboxLoginPage);
+const MailboxInboxPage = page(loadMailboxInboxPage, (m) => m.MailboxInboxPage);
 const ApiKeysPage = page(loadApiKeysPage, (m) => m.ApiKeysPage);
 const ProfilePage = page(loadProfilePage, (m) => m.ProfilePage);
 const UsersPage = page(preloadable(() => import('@/features/admin/users/users-page')), (m) => m.UsersPage);
@@ -59,6 +63,8 @@ const AdminAddressMailPage = page(
 );
 
 export const router = createBrowserRouter([
+  { path: '/mailbox-login', element: <MailboxLoginPage />, errorElement: <RouteErrorPage /> },
+  { path: '/mailbox-inbox', element: <MailboxInboxPage />, errorElement: <RouteErrorPage /> },
   {
     path: '/login',
     // 登录页静态打进入口：未登录首屏不再多一跳 chunk 请求

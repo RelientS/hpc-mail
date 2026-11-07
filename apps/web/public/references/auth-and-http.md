@@ -107,3 +107,11 @@ KEY_RESPONSE=$(hpc '/api-keys' -X POST -H 'Content-Type: application/json' \
 | 500 `internal`、网络超时、非 JSON | 读操作可有限退避重试；发送按相同幂等请求查结果，其他变更先读回状态 |
 
 `/v1` 响应可能带 `X-RateLimit-Limit/Remaining/Reset`，Reset 为下一分钟 Unix 秒数。除每 Key 限额，还有用户合计 1200 次/分钟、实例 10000 次/分钟；长轮询内部查库按用户额外限 120 次/分钟，不能靠多个 Key 放大。JWT 业务请求也限流（用户 600、实例 5000 次/分钟）。注册每 IP 10 次/小时，含失败尝试。所有轮询/重试设总体期限，无法确定结果就报告待确认及 requestId。
+
+## 单邮箱临时登录
+
+`/mailbox-login` 页面使用邮箱地址与所有者生成的临时密码登录。`POST /api/mailbox-access/login` 接收 `{email,password}`，返回 `{data:{success:true}}` 并设置 `__Secure-hpc_mailbox` Cookie（HttpOnly、Secure、SameSite=Strict、Path=/api/mailbox-access）。不要把临时密码当账号密码、JWT 或 API Key 使用。
+
+成功创建会话才扣 1 次，刷新/读邮件不扣。并发登录原子扣次，额度为零不能新登录，已签发会话仍可使用至 24 小时到期；退出通过 `POST /api/mailbox-access/logout` 撤销。密码重置、撤销、邮箱释放/过户、所有者禁用或更改账号密码会使旧会话失效。临时密码自身在用完额度前有效，可随时撤销。
+
+临时 Cookie 只能调用 `/api/mailbox-access/session`、`/messages?before=<id>`（每页30封）、`/messages/:id`、`/messages/:id/raw`、`/attachments/:id`。仅返回当前邮箱未删除的来信，不提供发信、删除、账号设置、其他邮箱和管理员接口。附件每次下载也校验会话。列表拒绝 address、scope、userId 等额外参数；不改所有者已读状态。写请求只接受本站 Origin，登录限流为每 IP 每15分钟30次尝试。

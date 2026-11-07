@@ -90,6 +90,13 @@ const delivery = object({ id: positiveId, messageId: nullable(positiveId), targe
   nextAttemptAt: date, lastAttemptAt: nullable(date),
 });
 export const schemas: Record<string, Schema> = {
+  CreateMailboxAccess: object({ maxLogins: { type: 'integer', minimum: 1, maximum: 100 } }),
+  CreatedMailboxAccess: object({ enabled: bool, maxLogins: int, usedLogins: int, remainingLogins: int, password: str }),
+  MailboxLogin: object({ email: { type: 'string', format: 'email', maxLength: 254 }, password: { type: 'string', minLength: 1, maxLength: 128 } }),
+  MailboxAccessSession: object({ address: str, displayName: str, expiresAt: str, remainingLogins: int }),
+  MailboxAccessMessage: object({ id: int, address: str, subject: str, fromAddress: str, fromName: str, preview: str, verificationCode: str, createdAt: str }),
+  MailboxAccessMessagePage: object({ items: array(ref('MailboxAccessMessage')), nextBefore: nullable(int) }),
+  MailboxAccessMessageDetail: { allOf: [ref('MailboxAccessMessage'), object({ bodyText: str, bodyHtml: str, hasRaw: bool, attachments: array(object({ id: int, filename: str, size: int, url: str })) })] },
   Error: object({ error: object({ code: { type: 'string', enum: ERROR_CODES }, message: str }), requestId: str }),
   MessageSummary: messageSummary,
   MessageDetail: object({ ...summaryProperties, replyTo: array(str), recipients: object({ to: array(str), cc: array(str), bcc: array(str) }),

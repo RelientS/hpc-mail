@@ -29,6 +29,8 @@ export const loadTrashPage = preloadable(() => import('@/features/trash/trash-pa
 export const loadMailboxesPage = preloadable(() => import('@/features/mailboxes/mailboxes-page'));
 export const loadApiKeysPage = preloadable(() => import('@/features/api-keys/api-keys-page'));
 export const loadProfilePage = preloadable(() => import('@/features/profile/profile-page'));
+export const loadMailboxLoginPage = preloadable(() => import('@/features/auth/mailbox-login-page'));
+export const loadMailboxInboxPage = preloadable(() => import('@/features/inbox/mailbox-inbox-page'));
 
 const ROUTE_LOADERS: ReadonlyArray<readonly [RegExp, () => Promise<unknown>]> = [
   [/^\/(?:inbox)?$/, loadInboxPage],

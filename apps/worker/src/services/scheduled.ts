@@ -8,6 +8,7 @@ import {
   mailboxes,
   messages,
   sessions,
+  mailboxAccessSessions,
 } from '../db/schema.js';
 import { chunk } from '../lib/d1.js';
 import type { Env } from '../types.js';
@@ -189,6 +190,8 @@ async function runMaintenance(env: Env, report: StepReport[]): Promise<void> {
     (await db.delete(apiRateLimits).where(lt(apiRateLimits.windowStart, staleWindow)).run()).meta.changes ?? 0);
   await step(report, 'sessions.cleanup', async () =>
     (await db.delete(sessions).where(lt(sessions.expiresAt, new Date())).run()).meta.changes ?? 0);
+  await step(report, 'mailbox-sessions.cleanup', async () =>
+    (await db.delete(mailboxAccessSessions).where(lt(mailboxAccessSessions.expiresAt, new Date())).run()).meta.changes ?? 0);
   await step(report, 'idempotency.cleanup', async () => (await db
     .delete(idempotencyRecords)
     .where(and(lt(idempotencyRecords.createdAt, new Date(Date.now() - 2 * DAY_MS)), eq(idempotencyRecords.status, 'completed')))
@@ -220,6 +223,7 @@ async function runMaintenance(env: Env, report: StepReport[]): Promise<void> {
     await purgeCounters(env, TRANSLATE_CHARS_SCOPE, dayWindow(new Date(Date.now() - 3 * DAY_MS)));
     await purgeCounters(env, TRANSLATE_REQUESTS_SCOPE, minuteWindow(1) - 120);
     await purgeCounters(env, 'login-fail', minuteWindow(15) - 8);
+    await purgeCounters(env, 'mailbox-login', minuteWindow(15) - 8);
     await purgeCounters(env, 'reg', minuteWindow(60) - 3);
   });
 }

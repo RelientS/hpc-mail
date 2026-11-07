@@ -1,4 +1,4 @@
-import type { ApiScope, Role, UserStatus } from '@hpc-mail/shared';
+import type { ApiScope, Role, UserStatus, MailboxAccessSession } from '@hpc-mail/shared';
 
 /** Worker 运行时绑定与变量（对应 wrangler.toml） */
 export interface Env {
@@ -37,6 +37,7 @@ export interface ApiKeyContext {
 }
 
 export interface AppVariables {
+  mailboxSession?: MailboxAccessSession;
   requestId: string;
   user?: AuthUser;
   sessionId?: string;

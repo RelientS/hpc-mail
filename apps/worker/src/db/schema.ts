@@ -58,6 +58,24 @@ export const mailboxes = sqliteTable(
   (t) => [index('idx_mailboxes_user').on(t.userId), index('idx_mailboxes_domain').on(t.domain)],
 );
 
+/** 独立于用户会话的单邮箱只读凭据；明文密码仅生成时返回。 */
+export const mailboxAccessGrants = sqliteTable('mailbox_access_grants', {
+  id: text('id').primaryKey(),
+  mailboxId: integer('mailbox_id').notNull().unique().references(() => mailboxes.id, { onDelete: 'cascade' }),
+  ownerId: integer('owner_id').notNull(),
+  ownerAuthVersion: integer('owner_auth_version').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  maxLogins: integer('max_logins').notNull(),
+  usedLogins: integer('used_logins').notNull().default(0),
+  createdAt: createdAtColumn(),
+});
+
+export const mailboxAccessSessions = sqliteTable('mailbox_access_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  grantId: text('grant_id').notNull().references(() => mailboxAccessGrants.id, { onDelete: 'cascade' }),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+}, (t) => [index('idx_mailbox_access_sessions_grant').on(t.grantId), index('idx_mailbox_access_sessions_expiry').on(t.expiresAt)]);
+
 export const messages = sqliteTable(
   'messages',
   {

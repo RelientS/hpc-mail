@@ -37,7 +37,7 @@ jq '{feishu:(.data.feishu + {contentLevel:"code_only"})}' <<< "$CURRENT_PREFS" |
 - **飞书**：HTTPS 飞书/Lark 自定义机器人 URL（服务器检查平台 host 与 hook 路径），可带机器人签名 secret。`code_only` 推送元信息与提取到的验证码，不含正文；没有提取码的邮件仍可通知。summary 正文最多 200 字符，full 最多约 4000 字符，并非原始 `.eml` 传输。测试会发送外部卡片，测试成功需平台 HTTP 与业务 code 均成功。
 - **PushDeer**：官方 `https://api2.pushdeer.com` 或自建实例端点及有效 PushKey；启用时需非空 PushKey。端点空串回落官方，当前服务接受 HTTP 或 HTTPS 的公网 origin、拒绝常见内网 host；建议 HTTPS。服务只取 URL 的 origin，路径/query/URL 用户密码不作为 PushDeer 认证配置；实际请求为该 origin 的 `/message/push`，认证用 pushkey。
 - **通用 Webhook**：HTTPS 公网接收端，不能内网或 URL 用户密码。固定 HPC Mail 事件格式，Bark/ntfy 等需自建适配，不能宣称其原生接口直接兼容。
-- **邮箱转发**：最多 5 个目标，启用时至少一个。Cloudflare 已验证 destination 可以原样 forward；未验证目标会用收件域 `no-reply@domain` 中转重发，邮件呈现/附件可能不同；不是保证保留全部原始 MIME。配置中目标仍应是用户授权的地址。外发大附件可能变下载链接，详见附件参考。
+- **邮箱转发**：最多 5 个目标，启用时至少一个。可用 `forward.sourceAddresses`（最多 100 个）限定本站收件邮箱，非空时精确匹配收件地址；空数组表示所有归属地址。更新时省略该字段保留原筛选，明确传 `[]` 才会清除筛选。Cloudflare 已验证 destination 可以原样 forward；未验证目标会用收件域 `no-reply@domain` 中转重发，邮件呈现/附件可能不同；不是保证保留全部原始 MIME。配置中目标仍应是用户授权的地址。外发大附件可能变下载链接，详见附件参考。
 
 ## Webhook 接收契约
 

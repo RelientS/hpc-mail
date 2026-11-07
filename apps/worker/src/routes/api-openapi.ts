@@ -6,6 +6,8 @@ import {
 /** Complete JWT-session contract; API keys are never accepted for these operations. */
 export function buildSessionOpenApiSpec(origin: string) {
   const admin = { role: 'admin' as const };
+  const mailboxCookie = { security: [{ mailboxSession: [] }] };
+  const accessStatus = object({ enabled: bool, maxLogins: int, usedLogins: int, remainingLogins: int });
   const paths: Paths = {
     '/openapi.json': { get: specificationOperation() },
     '/config': { get: operation('Read public site configuration', ref('PublicConfig'), { public: true }) },
@@ -34,6 +36,23 @@ export function buildSessionOpenApiSpec(origin: string) {
       post: operation('Claim an address on a configured domain', ref('Mailbox'), { request: 'ClaimMailboxRequest', status: 201,
         description: 'Claim only a domain returned by /domains. Existing history at the address becomes visible to the claimant. Ordinary users obey their effective public or dedicated domain/global/per-domain quotas and system reserved-prefix restrictions. Dedicated policies do not revoke existing owned mailboxes. Does not provision a domain or Email Routing.' }),
     },
+    '/mailboxes/{id}/temp-access': {
+      get: operation('Read temporary mailbox login allowance', accessStatus, { description: 'Owner or administrator only. Never returns the password.' }),
+      put: operation('Generate or replace a temporary mailbox password', ref('CreatedMailboxAccess'), { request: 'CreateMailboxAccess',
+        description: 'Owner or administrator only. Password is returned once. Replaces previous grant and revokes all its sessions atomically. 1-100 successful logins; each session lasts 24 hours.' }),
+      delete: operation('Revoke temporary mailbox password and all sessions', success, { description: 'Owner or administrator only; immediate revocation including attachments.' }),
+    },
+    '/mailbox-access/login': { post: operation('Sign in to one read-only inbox', success, { public: true, request: 'MailboxLogin',
+      description: 'Sets HttpOnly Secure SameSite=Strict __Secure-hpc_mailbox cookie (Path=/api/mailbox-access). Uses email plus generated temporary password. Successful login consumes one use atomically; failures and refreshes do not. Rate limited to 30 attempts/IP/15 minutes. This is not a JWT or API key and grants no ordinary account access.' }) },
+    '/mailbox-access/logout': { post: operation('Revoke this mailbox-only session and clear its cookie', success, { ...mailboxCookie }) },
+    '/mailbox-access/session': { get: operation('Read current single-mailbox session', ref('MailboxAccessSession'), mailboxCookie) },
+    '/mailbox-access/messages': { get: operation('Read only this mailbox incoming messages', ref('MailboxAccessMessagePage'), { ...mailboxCookie,
+      parameters: [query('before', { type: 'integer', minimum: 1 }, 'Exclusive message id cursor; page size 30.')],
+      description: 'Only undeleted inbound mail for the session address. Unknown filters including address, scope and userId are rejected. Does not change read status.' }) },
+    '/mailbox-access/messages/{id}': { get: operation('Read a message in this mailbox', ref('MailboxAccessMessageDetail'), mailboxCookie) },
+    '/mailbox-access/messages/{id}/raw': { get: operation('Download raw mail from this mailbox', str, { ...mailboxCookie, binary: 'application/octet-stream' }) },
+    '/mailbox-access/attachments/{id}': { get: operation('Download an attachment from this mailbox', str, { ...mailboxCookie, binary: 'application/octet-stream',
+      description: 'Requires an active mailbox cookie on every request; no reusable signed URLs. Other mailboxes, deleted mail and outgoing mail are rejected.' }) },
     '/mailboxes/shared': { get: operation('List inboxes shared with the caller', array(ref('SharedMailbox')), { description: 'Read-only inbound access; no sending, deletion or owner notifications. The read state of shared mail belongs to the owner: readers cannot change it, and it is excluded from their unread count and unread=1 list filter. Stars are personal.' }) },
     '/mailboxes/shares': {
       get: operation('List grants on caller-owned mailboxes', array(ref('MailboxShareGrant'))),
@@ -174,6 +193,7 @@ export function buildSessionOpenApiSpec(origin: string) {
     tags: [{ name: 'Mail', description: 'Session, mail, mailbox and personal preferences' }, { name: 'Administration', description: 'Administrator role required; no API-key scopes grant this role.' }],
     components: { securitySchemes: {
       sessionToken: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      mailboxSession: { type: 'apiKey', in: 'cookie', name: '__Secure-hpc_mailbox' },
       attachmentSignature: { type: 'apiKey', in: 'query', name: 'sig' }, attachmentExpiry: { type: 'apiKey', in: 'query', name: 'exp' },
     }, schemas: usedSchemas(paths) }, paths: describePaths(paths, 'jwt_'),
   };
